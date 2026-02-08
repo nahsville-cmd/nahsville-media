@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NAHS Media | Warp Drive Final</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: crosshair; 
+        }
+
+        .star-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transition: filter 1s ease; 
+            pointer-events: none; 
+        }
+
+        .warping {
+            filter: blur(4px) brightness(1.5);
+        }
+
+        #bg-stars { z-index: 1; }
+        #fg-stars { z-index: 2; }
+
+        /* THE LOGO CONTAINER */
+        .logo-pilot {
+            position: relative;
+            z-index: 10;
+            width: 240px;
+            filter: drop-shadow(0 0 15px rgba(0, 150, 255, 0.4));
+            transition: all 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            /* We remove pointer-events: none from here so the link inside works */
+        }
+
+        /* THE LINK: This makes the logo clickable */
+        .logo-link {
+            display: block;
+            cursor: pointer;
+            pointer-events: all; /* This ensures the click is captured */
+            text-decoration: none;
+        }
+
+        .logo-pilot img {
+            width: 100%;
+            display: block;
+            /* We put pointer-events: none on the image itself so it doesn't 
+               interfere with the starfield's 'mouseover' detection */
+            pointer-events: none; 
+        }
+
+        /* The 'Old School' CRT Overlay */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.04));
+            z-index: 20;
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-stars" class="star-layer"></canvas>
+    <canvas id="fg-stars" class="star-layer"></canvas>
+
+    <div class="logo-pilot" id="main-logo">
+        <a href="https://www.youtube.com/@nahsville" target="_blank" class="logo-link">
+            <img src="nahs%20spin%20gif%20with%20zoom.gif" alt="NAHS Logo">
+        </a>
+    </div>
+
+    <script>
+        class Starfield {
+            constructor(canvasId, starCount, normalSpeed, warpSpeed, maxStarSize) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.starCount = starCount;
+                this.normalSpeed = normalSpeed;
+                this.warpSpeed = warpSpeed;
+                this.currentSpeed = normalSpeed;
+                this.maxStarSize = maxStarSize;
+                this.stars = [];
+                this.init();
+            }
+
+            init() {
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+                this.stars = [];
+                for (let i = 0; i < this.starCount; i++) {
+                    this.stars.push({
+                        x: Math.random() * this.width - this.width / 2,
+                        y: Math.random() * this.height - this.height / 2,
+                        z: Math.random() * this.width
+                    });
+                }
+            }
+
+            update() {
+                if (this.canvas.id === 'bg-stars') {
+                    this.ctx.fillStyle = "black";
+                    this.ctx.fillRect(0, 0, this.width, this.height);
+                } else {
+                    this.ctx.clearRect(0, 0, this.width, this.height);
+                }
+
+                this.ctx.fillStyle = "white";
+                for (let i = 0; i < this.starCount; i++) {
+                    let s = this.stars[i];
+                    s.z -= this.currentSpeed;
+                    if (s.z <= 0) s.z = this.width;
+                    let x = (s.x / s.z) * (this.width / 2) + this.width / 2;
+                    let y = (s.y / s.z) * (this.height / 2) + this.height / 2;
+                    let size = (1 - s.z / this.width) * this.maxStarSize;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+            }
+        }
+
+        const background = new Starfield('bg-stars', 400, 0.5, 12, 1.5);
+        const foreground = new Starfield('fg-stars', 100, 3.5, 35, 4);
+        const logo = document.getElementById('main-logo');
+
+        let isHovering = false;
+
+        document.addEventListener('mousemove', () => {
+            if (!isHovering) {
+                isHovering = true;
+                background.currentSpeed = background.warpSpeed;
+                foreground.currentSpeed = foreground.warpSpeed;
+                document.querySelectorAll('.star-layer').forEach(l => l.classList.add('warping'));
+                logo.style.transform = "scale(0.8) translateZ(-100px)";
+                logo.style.filter = "drop-shadow(0 0 50px rgba(0, 150, 255, 1))";
+            }
+        });
+
+        let timeout;
+        document.addEventListener('mousemove', () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                isHovering = false;
+                background.currentSpeed = background.normalSpeed;
+                foreground.currentSpeed = foreground.normalSpeed;
+                document.querySelectorAll('.star-layer').forEach(l => l.classList.remove('warping'));
+                logo.style.transform = "scale(1) translateZ(0)";
+                logo.style.filter = "drop-shadow(0 0 15px rgba(0, 150, 255, 0.4))";
+            }, 3000); 
+        });
+
+        window.addEventListener('resize', () => {
+            background.init();
+            foreground.init();
+        });
+
+        function animate() {
+            background.update();
+            foreground.update();
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+</html>
