@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>NAHS Media | Warp Drive Final</title>
+    <title>NAHS Media | Enhanced Warp Drive</title>
     <style>
         body, html {
             margin: 0;
@@ -27,40 +27,36 @@
             pointer-events: none; 
         }
 
+        /* Intensified motion blur and brightness for 'astounding' streaks */
         .warping {
-            filter: blur(4px) brightness(1.5);
+            filter: blur(2px) brightness(2.0) contrast(1.5);
         }
 
         #bg-stars { z-index: 1; }
         #fg-stars { z-index: 2; }
 
-        /* THE LOGO CONTAINER */
         .logo-pilot {
             position: relative;
             z-index: 10;
             width: 240px;
             filter: drop-shadow(0 0 15px rgba(0, 150, 255, 0.4));
             transition: all 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-            /* We remove pointer-events: none from here so the link inside works */
         }
 
-        /* THE LINK: This makes the logo clickable */
         .logo-link {
             display: block;
             cursor: pointer;
-            pointer-events: all; /* This ensures the click is captured */
+            pointer-events: all; 
             text-decoration: none;
         }
 
         .logo-pilot img {
             width: 100%;
             display: block;
-            /* We put pointer-events: none on the image itself so it doesn't 
-               interfere with the starfield's 'mouseover' detection */
             pointer-events: none; 
         }
 
-        /* The 'Old School' CRT Overlay */
+        /* Retro CRT Overlay */
         body::before {
             content: " ";
             display: block;
@@ -109,7 +105,8 @@
                     this.stars.push({
                         x: Math.random() * this.width - this.width / 2,
                         y: Math.random() * this.height - this.height / 2,
-                        z: Math.random() * this.width
+                        z: Math.random() * this.width,
+                        prevZ: 0 // Used to draw the streak line
                     });
                 }
             }
@@ -122,26 +119,46 @@
                     this.ctx.clearRect(0, 0, this.width, this.height);
                 }
 
-                this.ctx.fillStyle = "white";
+                this.ctx.strokeStyle = "white";
+                this.ctx.lineCap = "round";
+
                 for (let i = 0; i < this.starCount; i++) {
                     let s = this.stars[i];
+                    s.prevZ = s.z;
                     s.z -= this.currentSpeed;
-                    if (s.z <= 0) s.z = this.width;
+
+                    if (s.z <= 0) {
+                        s.z = this.width;
+                        s.prevZ = s.z;
+                    }
+
+                    // Calculate current position
                     let x = (s.x / s.z) * (this.width / 2) + this.width / 2;
                     let y = (s.y / s.z) * (this.height / 2) + this.height / 2;
+
+                    // Calculate previous position for the streak effect
+                    let px = (s.x / s.prevZ) * (this.width / 2) + this.width / 2;
+                    let py = (s.y / s.prevZ) * (this.height / 2) + this.height / 2;
+
                     let size = (1 - s.z / this.width) * this.maxStarSize;
+
+                    // DRAW THE STREAK
                     this.ctx.beginPath();
-                    this.ctx.arc(x, y, size, 0, Math.PI * 2);
-                    this.ctx.fill();
+                    this.ctx.lineWidth = size;
+                    this.ctx.moveTo(x, y);
+                    this.ctx.lineTo(px, py);
+                    this.ctx.stroke();
                 }
             }
         }
 
-        const background = new Starfield('bg-stars', 400, 0.5, 12, 1.5);
-        const foreground = new Starfield('fg-stars', 100, 3.5, 35, 4);
+        // DESIGNER SETTINGS: Increased star counts and speed for high visibility
+        const background = new Starfield('bg-stars', 600, 0.8, 18, 2);
+        const foreground = new Starfield('fg-stars', 150, 4.5, 50, 6);
         const logo = document.getElementById('main-logo');
 
         let isHovering = false;
+        let timeout;
 
         document.addEventListener('mousemove', () => {
             if (!isHovering) {
@@ -152,10 +169,7 @@
                 logo.style.transform = "scale(0.8) translateZ(-100px)";
                 logo.style.filter = "drop-shadow(0 0 50px rgba(0, 150, 255, 1))";
             }
-        });
-
-        let timeout;
-        document.addEventListener('mousemove', () => {
+            
             clearTimeout(timeout);
             timeout = setTimeout(() => {
                 isHovering = false;
